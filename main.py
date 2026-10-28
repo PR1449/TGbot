@@ -1,11 +1,20 @@
+import asyncio
 import logging
-import re
-from aiogram import Bot
+
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import CommandStart
+from aiogram.types import Message
 
 from secret_keys import BOT_TOKEN
+
+dp = Dispatcher()
+
+
+@dp.message(CommandStart())
+async def command_start_handler(message: Message) -> None:
+    await message.answer("Привет! Я бот. ")
 
 
 async def main() -> None:
@@ -15,5 +24,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    asyncio.run(main())   
