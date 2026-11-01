@@ -14,7 +14,7 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer("Привет! Я бот. ")
+    await message.answer("Привет! Я бот ЖКУ-контроль. Давай начнём работу, выбери опцию: ")
 
 
 async def main() -> None:
