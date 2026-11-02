@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЖКУ-контроль — коммунальные проблемы под контролем</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#f5f7fb; --card:#fff; --text:#172033; --muted:#697386;
+    --line:#e5e9f2; --accent:#5b5ce2; --accent2:#7778f0;
+    --green:#20a464; --orange:#e99624; --red:#df4b4b;
+    --shadow:0 12px 35px rgba(26,35,61,.08);
+  }
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#dfe3ec;color:var(--text)}
+  main{padding:18px 0 35px}
+  section.hero, section:not(.hero){max-width:1180px;min-height:calc(100vh - 36px);margin:18px auto;background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:0 18px 55px rgba(26,35,61,.12);padding:58px 42px;scroll-margin-top:82px;display:flex;flex-direction:column;justify-content:center}
+  section.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:55px;align-items:center}
+  section#dashboard, section#demo, section#about{justify-content:center}
+  footer{max-width:1180px;margin:0 auto 18px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px 22px}
+  @media(max-width:850px){
+    section.hero, section:not(.hero){min-height:calc(100vh - 20px);margin:10px auto;padding:35px 20px;border-radius:22px}
+    section.hero{display:flex}
+  }
+  button,input,textarea{font:inherit}
+  button{cursor:pointer}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+  .logo{width:36px;height:36px;border-radius:11px;background:var(--accent);display:grid;place-items:center;color:#fff;font-size:19px}
+  .navlinks{display:flex;gap:8px}
+  .navlinks button{border:0;background:transparent;padding:9px 13px;border-radius:9px;color:var(--muted)}
+  .navlinks button:hover{background:#e9ebff;color:var(--accent)}
+  .hero{max-width:1180px;margin:0 auto;padding:72px 22px 45px;display:grid;grid-template-columns:1.05fr .95fr;gap:55px;align-items:center}
+  .eyebrow{display:inline-flex;gap:8px;align-items:center;padding:7px 11px;background:#e9eaff;color:var(--accent);border-radius:99px;font-size:13px;font-weight:700}
+  h1{font-size:52px;line-height:1.02;margin:18px 0 17px;letter-spacing:-2px}
+  .hero p{font-size:18px;line-height:1.6;color:var(--muted);max-width:620px}
+  .hero-actions{display:flex;gap:12px;margin-top:25px;flex-wrap:wrap}
+  .primary,.secondary{border:0;border-radius:12px;padding:13px 18px;font-weight:750}
+  .primary{background:var(--accent);color:#fff;box-shadow:0 8px 20px rgba(91,92,226,.22)}
+  .secondary{background:#fff;color:var(--text);border:1px solid var(--line)}
+  .mock{background:#111827;border-radius:24px;padding:12px;box-shadow:var(--shadow);transform:rotate(1deg)}
+  .mock-inner{background:#f7f8fc;border-radius:16px;overflow:hidden}
+  .mock-head{background:#fff;padding:15px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-weight:800}
+  .house-list{padding:13px}
+  .house{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between}
+  .house-name{font-weight:750}.house-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:750}
+  .dot{width:9px;height:9px;border-radius:50%}.g{background:var(--green)}.o{background:var(--orange)}.r{background:var(--red)}
+  section{max-width:1180px;margin:18px auto;padding:58px 42px}
+  .section-title{font-size:32px;letter-spacing:-.7px;margin:0 0 9px}.section-sub{color:var(--muted);margin:0 0 25px;line-height:1.55}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+  .dashboard{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+  .panel-head{padding:19px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .panel-head h3{margin:0;font-size:17px}
+  .small{font-size:12px;color:var(--muted)}
+  .houses{padding:13px}
+  .house-row{display:grid;grid-template-columns:1fr repeat(3,90px) 85px;gap:10px;align-items:center;padding:15px 10px;border-bottom:1px solid var(--line)}
+  .house-row:last-child{border-bottom:0}
+  .service{text-align:center;font-size:12px;font-weight:700}
+  .service .status{justify-content:center;margin-top:5px}
+  .viewbtn{border:0;background:#eef0ff;color:var(--accent);border-radius:9px;padding:8px;font-weight:700}
+  .alerts{padding:17px}
+  .alert{border-radius:13px;padding:13px;margin-bottom:10px;background:#fafbfe;border:1px solid var(--line)}
+  .alert strong{display:block;font-size:13px;margin-bottom:4px}.alert span{font-size:12px;color:var(--muted)}
+  .demo{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .phone{max-width:440px;margin:auto;background:#111827;padding:11px;border-radius:25px;box-shadow:var(--shadow)}
+  .screen{background:#f7f8fc;border-radius:17px;overflow:hidden;min-height:550px}
+  .tghead{background:#fff;padding:16px;font-weight:800;border-bottom:1px solid var(--line)}
+  .tgbody{padding:18px}
+  .bubble{background:#fff;border:1px solid var(--line);padding:14px;border-radius:14px 14px 14px 4px;line-height:1.45;font-size:14px;margin-bottom:12px}
+  .tg-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .tg-buttons button{border:1px solid var(--line);background:#fff;padding:11px;border-radius:10px;font-weight:700;color:var(--text)}
+  .tg-buttons button:hover{border-color:#b8b9f5;background:#f0f1ff}
+  .demo-note{padding:22px;align-self:center}
+  .demo-note h3{font-size:25px;margin:0 0 10px}.demo-note p{color:var(--muted);line-height:1.6}
+  .step{display:flex;gap:12px;margin:17px 0}.num{flex:0 0 30px;height:30px;border-radius:9px;background:#e9eaff;color:var(--accent);display:grid;place-items:center;font-weight:800}
+  .step b{display:block;margin-bottom:3px}.step span{color:var(--muted);font-size:14px;line-height:1.45}
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+  .feature{padding:22px}.feature .ico{font-size:25px}.feature h3{margin:13px 0 7px}.feature p{color:var(--muted);font-size:14px;line-height:1.55;margin:0}
+  .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch}
+  .flow-card{padding:18px;text-align:center;position:relative}.flow-card:not(:last-child)::after{content:"→";position:absolute;right:-15px;top:42px;color:#a5a9b7;font-size:22px}
+  .flow-card .big{font-size:28px}.flow-card h4{margin:9px 0 5px}.flow-card p{font-size:12px;color:var(--muted);line-height:1.4}
+  .pricing{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .price-card{padding:25px}.price{font-size:38px;font-weight:850;margin:9px 0}.price small{font-size:14px;color:var(--muted);font-weight:500}
+  ul{padding-left:20px;color:var(--muted);line-height:1.9}
+  .hypothesis{background:#fff9eb;border:1px solid #f1dfb4;border-radius:14px;padding:15px;color:#72561f;font-size:13px;line-height:1.5}
+  footer{padding:30px 22px;text-align:center;color:var(--muted);font-size:12px}
+  .modal{position:fixed;inset:0;background:rgba(15,20,35,.45);display:none;place-items:center;z-index:50;padding:20px}
+  .modal.show{display:grid}.modal-card{width:min(600px,100%);background:#fff;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,.22);overflow:hidden}
+  .modal-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.close{border:0;background:#f1f2f7;border-radius:9px;width:34px;height:34px}
+  .modal-body{padding:20px}.modal-body h2{margin-top:0}.ticket{padding:15px;background:#f7f8fc;border-radius:13px;margin:12px 0}.ticket b{display:block;margin-bottom:4px}
+  .form label{font-size:13px;font-weight:700;display:block;margin:13px 0 6px}.form input,.form textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;outline:none}.form textarea{min-height:85px;resize:vertical}
+  .page-dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:25;display:flex;flex-direction:column;gap:9px}
+  .page-dots button{width:9px;height:9px;padding:0;border:0;border-radius:50%;background:#aeb5c5;opacity:.8}
+  .page-dots button.active{background:var(--accent);transform:scale(1.45);opacity:1}
+  .page-label{position:fixed;left:18px;bottom:18px;z-index:25;background:rgba(23,32,51,.88);color:#fff;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:700;opacity:.9}
+  .toast{position:fixed;right:20px;bottom:20px;background:#172033;color:#fff;padding:13px 17px;border-radius:12px;display:none;z-index:70;box-shadow:var(--shadow);font-size:13px}.toast.show{display:block}
+  @media(max-width:850px){h1{font-size:40px}.hero{grid-template-columns:1fr}.dashboard,.demo,.pricing{grid-template-columns:1fr}.features{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.flow-card:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-18px}.house-row{grid-template-columns:1fr 70px 70px 70px}.house-row .viewbtn{display:none}.navlinks{display:none}}
+
+  .bot-window{background:#0f1726;border-radius:22px;overflow:hidden;box-shadow:0 18px 45px rgba(20,31,52,.18);border:1px solid #25344e;color:#fff}
+  .bot-top{height:52px;background:#17243a;display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #263650}
+  .bot-avatar{width:34px;height:34px;border-radius:50%;background:#229ed9;display:grid;place-items:center;font-size:18px}
+  .bot-name{font-weight:800;font-size:13px}.bot-sub{font-size:10px;color:#91a1ba;margin-top:2px}
+  .bot-body{padding:14px;background:linear-gradient(180deg,#0d1727,#111c2d);min-height:240px}
+  .bot-msg{max-width:92%;background:#1d3049;border-radius:12px 12px 12px 4px;padding:11px 12px;font-size:12px;line-height:1.45;box-shadow:0 4px 12px rgba(0,0,0,.12);margin-bottom:9px}
+  .bot-msg strong{display:block;margin-bottom:5px}.bot-time{float:right;color:#7f91aa;font-size:9px;margin:5px 0 0 8px}
+  .bot-buttons{display:grid;gap:7px;margin-top:10px}.bot-btn{border:1px solid #355477;background:#213a5b;color:#eaf3ff;border-radius:9px;padding:9px 10px;text-align:center;font-size:11px;font-weight:700;cursor:pointer}.bot-btn:hover{background:#2a4a70}
+  .bot-compose{background:#17243a;border-top:1px solid #263650;padding:9px 12px;color:#71839c;font-size:10px}
+  .mini-bots{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.mini-bot .bot-body{min-height:230px}.mini-bot h3{margin:0 0 7px;font-size:16px}.bot-tag{display:inline-flex;align-items:center;gap:5px;background:#203552;border-radius:99px;padding:5px 8px;font-size:10px;color:#b9d7f7;margin-bottom:8px}
+  .flow-bot{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch}.flow-bot .bot-window{min-width:0}.flow-bot .bot-body{min-height:190px}.flow-bot .bot-btn{font-size:9px;padding:7px 5px}.flow-bot .bot-msg{font-size:10px}
+  .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.kpi{background:#17263b;border:1px solid #2b3d58;border-radius:10px;padding:10px}.kpi b{font-size:18px}.kpi span{display:block;font-size:9px;color:#91a1ba;margin-top:2px}
+  @media(max-width:850px){.mini-bots,.flow-bot{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <nav class="nav">
+    <div class="brand"><div class="logo">⌂</div>ЖКУ-контроль</div>
+    <div class="navlinks">
+      <button onclick="go('dashboard')">Мониторинг</button>
+      <button onclick="go('demo')">Демо</button>
+      <button onclick="go('about')">Как работает</button>
+    </div>
+  </nav>
+</header>
+
+<main>
+<section class="hero" id="top">
+  <div>
+    <span class="eyebrow">● Коммунальные услуги под контролем</span>
+    <h1>Один экран —<br>все проблемы домов.</h1>
+    <p>Система для УК, которая объединяет обращения жителей, мониторинг состояния домов, работу диспетчеров и адресные уведомления.</p>
+    <div class="hero-actions">
+      <button class="primary" onclick="go('dashboard')">Открыть мониторинг</button>
+      <button class="secondary" onclick="openReport()">Создать заявку</button>
+    </div>
+  </div>
+
+  <div class="bot-window">
+    <div class="bot-top"><div class="bot-avatar">🏠</div><div><div class="bot-name">ЖКУ-контроль</div><div class="bot-sub">бот · онлайн</div></div></div>
+    <div class="bot-body">
+      <div class="bot-msg"><strong>Здравствуйте! 👋</strong>Я помогу сообщить о коммунальной проблеме, посмотреть заявку или узнать состояние вашего дома.<span class="bot-time">12:04</span>
+        <div class="bot-buttons"><button class="bot-btn" onclick="go('demo')">🚨 Сообщить о проблеме</button><button class="bot-btn" onclick="go('demo')">📋 Мои заявки</button><button class="bot-btn" onclick="go('dashboard')">🏠 Состояние дома</button><button class="bot-btn" onclick="go('demo')">📢 Уведомления</button></div>
+      </div>
+    </div><div class="bot-compose">✎  Написать сообщение...</div>
+  </div>>
+</section>
+
+<section id="dashboard">
+  <h2 class="section-title">Мониторинг домов</h2>
+  <p class="section-sub">Демонстрационные данные: цвет показывает общее состояние коммунальных услуг в доме.</p>
+  <div class="dashboard">
+    <div class="panel">
+      <div class="panel-head"><h3>Состояние домов</h3><span class="small">3 дома в системе</span></div>
+      <div class="houses">
+        <div class="house-row">
+          <div><b>Пушкина, 12</b><div class="small">48 квартир</div></div>
+          <div class="service">🔥<div class="status"><i class="dot g"></i>Норма</div></div>
+          <div class="service">💧<div class="status"><i class="dot g"></i>Норма</div></div>
+          <div class="service">⚡<div class="status"><i class="dot g"></i>Норма</div></div>
+          <button class="viewbtn" onclick="openHouse('Пушкина, 12','Норма')">Открыть</button>
+        </div>
+        <div class="house-row">
+          <div><b>Пушкина, 14</b><div class="small">72 квартиры · 4 обращения</div></div>
+          <div class="service">🔥<div class="status"><i class="dot o"></i>Жалобы</div></div>
+          <div class="service">💧<div class="status"><i class="dot g"></i>Норма</div></div>
+          <div class="service">⚡<div class="status"><i class="dot g"></i>Норма</div></div>
+          <button class="viewbtn" onclick="openHouse('Пушкина, 14','Есть обращения')">Открыть</button>
+        </div>
+        <div class="house-row">
+          <div><b>Ленина, 7</b><div class="small">96 квартир · 12 обращений</div></div>
+          <div class="service">🔥<div class="status"><i class="dot r"></i>Авария</div></div>
+          <div class="service">💧<div class="status"><i class="dot g"></i>Норма</div></div>
+          <div class="service">⚡<div class="status"><i class="dot o"></i>Работы</div></div>
+          <button class="viewbtn" onclick="openHouse('Ленина, 7','Авария')">Открыть</button>
+        </div>
+      </div>
+    </div>
+    <div class="bot-window">
+      <div class="bot-top"><div class="bot-avatar">🧑‍💻</div><div><div class="bot-name">ЖКУ-контроль · Диспетчер</div><div class="bot-sub">рабочий интерфейс</div></div></div>
+      <div class="bot-body">
+        <div class="bot-msg"><strong>⚠ Последние события</strong>Выберите действие или откройте заявку.<div class="bot-buttons"><button class="bot-btn" onclick="openHouse('Ленина, 7','Авария')">🔴 Ленина, 7 · отопление · 12 обращений</button><button class="bot-btn" onclick="openHouse('Пушкина, 14','Есть обращения')">🟠 Пушкина, 14 · отопление · 4 обращения</button><button class="bot-btn" onclick="toast('Открыт журнал событий')">📢 Плановые работы · Пушкина, 12</button></div><span class="bot-time">12:04</span></div>
+      </div><div class="bot-compose">⚙ Панель диспетчера · 3 дома · 16 активных обращений</div>
+    </div>
+  </div>
+</section>
+
+<section id="demo">
+  <h2 class="section-title">Интерактивный сценарий</h2>
+  <p class="section-sub">Покажи на защите полный путь: житель сообщает о проблеме → УК получает заявку → статус меняется → жители получают уведомление.</p>
+  <div class="demo">
+    <div class="phone">
+      <div class="screen">
+        <div class="tghead">🤖 ЖКУ-контроль · Житель</div>
+        <div class="tgbody" id="tgbody">
+          <div class="bubble"><b>ЖКУ-контроль</b><br>Здравствуйте! Чем могу помочь?<div class="tg-buttons">
+            <button onclick="reportStep(1)">🚨 Сообщить о проблеме</button>
+            <button onclick="reportStep(2)">📋 Мои заявки</button>
+            <button onclick="reportStep(3)">📢 Уведомления</button>
+            <button onclick="reportStep(4)">🏠 Мой дом</button>
+          </div></div>
+        </div>
+      </div>
+    </div>
+    <div class="demo-note panel">
+      <h3>Сценарий для презентации</h3>
+      <div class="step"><div class="num">1</div><div><b>Житель</b><span>Нажимает «Сообщить о проблеме» и выбирает отопление.</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>Заявка</b><span>Указывает адрес и описание проблемы. Получает номер заявки.</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>Диспетчер</b><span>Видит проблему на панели и передаёт её исполнителю.</span></div></div>
+      <div class="step"><div class="num">4</div><div><b>Статус</b><span>«Принята» → «Бригада направлена» → «Устранено».</span></div></div>
+      <div class="hypothesis"><b>Гипотеза:</b> адресные уведомления и единый статус могут снизить количество повторных обращений жителей. Эффект нужно проверить на реальных пользователях.</div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <h2 class="section-title">Что получает УК</h2>
+  <p class="section-sub">Не просто ещё один канал связи, а единый рабочий контур для коммунальных обращений.</p>
+  <div class="mini-bots">
+    <div class="mini-bot">
+      <div class="bot-window"><div class="bot-top"><div class="bot-avatar">🏠</div><div><div class="bot-name">Для жителя</div><div class="bot-sub">ЖКУ-контроль</div></div></div><div class="bot-body"><div class="bot-tag">🟢 Мой дом · Ленина, 7</div><div class="bot-msg"><strong>Состояние услуг</strong>🔥 Отопление — 🔴 авария<br>💧 Вода — 🟢 норма<br>⚡ Электричество — 🟠 работы<div class="bot-buttons"><button class="bot-btn" onclick="reportStep(1)">🚨 Сообщить о проблеме</button><button class="bot-btn" onclick="reportStep(2)">📋 Мои заявки</button></div></div></div></div>
+    </div>
+    <div class="mini-bot">
+      <div class="bot-window"><div class="bot-top"><div class="bot-avatar">🧑‍💻</div><div><div class="bot-name">Для диспетчера</div><div class="bot-sub">Контроль заявок</div></div></div><div class="bot-body"><div class="bot-msg"><strong>Заявка №1048</strong>🔥 Отопление · Ленина, 7<br>Батареи холодные во всём подъезде.<div class="bot-buttons"><button class="bot-btn" onclick="toast('Бригада назначена на заявку №1048')">🔧 Назначить бригаду</button><button class="bot-btn" onclick="toast('Статус изменён: в работе')">🟠 Изменить статус</button></div></div></div></div>
+    </div>
+    <div class="mini-bot">
+      <div class="bot-window"><div class="bot-top"><div class="bot-avatar">🔧</div><div><div class="bot-name">Для бригады</div><div class="bot-sub">Назначенные задачи</div></div></div><div class="bot-body"><div class="bot-msg"><strong>Вам назначена заявка №1048</strong>Ленина, 7 · Отопление<br>Описание: батареи холодные<div class="bot-buttons"><button class="bot-btn" onclick="toast('Статус: работа начата')">▶ Начать работу</button><button class="bot-btn" onclick="toast('Статус: устранено')">✅ Отметить как устранённое</button></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2 class="section-title">Как работает система</h2>
+  <p class="section-sub">Один сквозной сценарий от проблемы до её устранения.</p>
+  <div class="flow-bot">
+    <div class="bot-window"><div class="bot-top"><div class="bot-avatar">👤</div><div><div class="bot-name">Житель</div><div class="bot-sub">шаг 1</div></div></div><div class="bot-body"><div class="bot-msg"><strong>Что случилось?</strong><div class="bot-buttons"><button class="bot-btn">🔥 Отопление</button><button class="bot-btn">💧 Вода</button></div></div></div></div>
+    <div class="bot-window"><div class="bot-top"><div class="bot-avatar">📨</div><div><div class="bot-name">Заявка</div><div class="bot-sub">шаг 2</div></div></div><div class="bot-body"><div class="bot-msg"><strong>№1048 создана</strong>Ленина, 7<br>🔥 Отопление<div class="bot-tag">🟠 В работе</div></div></div></div>
+    <div class="bot-window"><div class="bot-top"><div class="bot-avatar">🧑‍💻</div><div><div class="bot-name">Диспетчер</div><div class="bot-sub">шаг 3</div></div></div><div class="bot-body"><div class="bot-msg"><strong>Новая заявка</strong>Проверить описание и назначить исполнителя<div class="bot-buttons"><button class="bot-btn">🔧 Назначить бригаду</button></div></div></div></div>
+    <div class="bot-window"><div class="bot-top"><div class="bot-avatar">🔧</div><div><div class="bot-name">Бригада</div><div class="bot-sub">шаг 4</div></div></div><div class="bot-body"><div class="bot-msg"><strong>Работа по №1048</strong>Ленина, 7<div class="bot-buttons"><button class="bot-btn">▶ Начать</button><button class="bot-btn">✅ Устранено</button></div></div></div></div>
+    <div class="bot-window"><div class="bot-top"><div class="bot-avatar">🔔</div><div><div class="bot-name">Житель</div><div class="bot-sub">шаг 5</div></div></div><div class="bot-body"><div class="bot-msg"><strong>✅ Проблема устранена</strong>Заявка №1048 закрыта.<div class="bot-tag">Уведомление отправлено</div></div></div></div>
+  </div>
+</section>
+
+<section id="business">
+  <h2 class="section-title">Бизнес-модель</h2>
+  <p class="section-sub">Учебная гипотеза для прототипа — реальные цену и экономию предстоит проверить.</p>
+  <div class="pricing">
+    <div class="bot-window"><div class="bot-top"><div class="bot-avatar">📊</div><div><div class="bot-name">ЖКУ-контроль · УК</div><div class="bot-sub">рабочая панель</div></div></div><div class="bot-body"><div class="bot-msg"><strong>Сводка за сегодня</strong>Обращения: 16<br>В работе: 5<br>Устранено: 8<div class="kpi-row"><div class="kpi"><b>3</b><span>дома</span></div><div class="kpi"><b>16</b><span>обращений</span></div><div class="kpi"><b>8</b><span>закрыто</span></div></div></div></div><div class="bot-compose">💼 Подписка для УК · учебная гипотеза: 1 000 ₽/месяц</div></div>
+    <div class="panel price-card"><span class="eyebrow">B2B · для УК</span><div class="price">1 000 ₽ <small>/ месяц</small></div><ul><li>единая панель обращений</li><li>мониторинг домов</li><li>адресные уведомления</li><li>статусы заявок</li></ul><div class="hypothesis">Цена и фактическая экономия времени — <b>учебные гипотезы</b>, их нужно проверить на реальных УК.</div></div>
+  </div>
+</section>
+</main>
+
+<footer>ЖКУ-контроль · прототип продукта · демонстрационные данные</footer>
+
+<div class="page-dots" aria-label="Навигация по страницам">
+  <button onclick="go('top')" aria-label="Главная"></button>
+  <button onclick="go('dashboard')" aria-label="Мониторинг"></button>
+  <button onclick="go('demo')" aria-label="Демо"></button>
+  <button onclick="go('about')" aria-label="Для УК"></button>
+  <button onclick="go('flow')" aria-label="Сценарий"></button>
+  <button onclick="go('business')" aria-label="Бизнес-модель"></button>
+</div>
+<div class="page-label" id="pageLabel">01 · Презентация</div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-card">
+    <div class="modal-head"><b id="modalTitle">ЖКУ-контроль</b><button class="close" onclick="closeModal()">×</button></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+function go(id){document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'})}
+const pages=[['top','01 · Презентация'],['dashboard','02 · Мониторинг'],['demo','03 · Демо жителя'],['about','04 · Возможности для УК'],['flow','05 · Сквозной сценарий'],['business','06 · Бизнес-модель']];
+const dotButtons=[...document.querySelectorAll('.page-dots button')];
+const label=document.getElementById('pageLabel');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const i=pages.findIndex(x=>x[0]===e.target.id);
+      if(i>=0){dotButtons.forEach((b,j)=>b.classList.toggle('active',j===i));label.textContent=pages[i][1];}
+    }
+  });
+},{threshold:.55});
+pages.forEach(x=>{const el=document.getElementById(x[0]);if(el)obs.observe(el);});
+function toast(text){const t=document.getElementById('toast');t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('show')}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function openHouse(address,status){
+  openModal('🏠 '+address,`
+    <div class="ticket"><b>Общее состояние</b>${status}</div>
+    <div class="ticket"><b>🔥 Отопление</b>${status==='Авария'?'🔴 Аварийная ситуация — 12 обращений':'🟢 Штатно'}</div>
+    <div class="ticket"><b>💧 Водоснабжение</b>🟢 Штатно</div>
+    <div class="ticket"><b>⚡ Электричество</b>${address==='Ленина, 7'?'🟠 Плановые работы':'🟢 Штатно'}</div>
+    <button class="primary" style="width:100%" onclick="closeModal();toast('Карточка дома открыта')">Понятно</button>
+  `)
+}
+function openReport(){
+  openModal('🚨 Новая заявка',`
+    <div class="form">
+      <label>Коммунальная услуга</label>
+      <input value="🔥 Отопление">
+      <label>Адрес</label>
+      <input id="addr" value="ул. Ленина, 7">
+      <label>Что произошло?</label>
+      <textarea id="desc">Батареи холодные, проблема наблюдается во всём подъезде.</textarea>
+      <button class="primary" style="width:100%;margin-top:15px" onclick="createTicket()">Создать заявку</button>
+    </div>
+  `)
+}
+function createTicket(){
+  openModal('✅ Заявка создана',`
+    <div class="ticket"><b>Заявка №1048</b>Принята диспетчерской службой</div>
+    <div class="ticket"><b>Адрес</b>${document.getElementById('addr').value}</div>
+    <div class="ticket"><b>Статус</b>🟠 В работе</div>
+    <p style="color:var(--muted);font-size:13px">В демонстрационном прототипе данные модельные.</p>
+    <button class="primary" style="width:100%" onclick="closeModal();go('demo');toast('Заявка №1048 добавлена')">Перейти к статусу</button>
+  `)
+}
+function reportStep(step){
+  const b=document.getElementById('tgbody');
+  if(step===1){
+    b.innerHTML=`<div class="bubble"><b>Выберите проблему</b><div class="tg-buttons">
+      <button onclick="reportStep(5)">🔥 Отопление</button><button onclick="toast('В MVP этот раздел отложен')">💧 Вода</button>
+      <button onclick="toast('В MVP этот раздел отложен')">⚡ Электричество</button><button onclick="toast('В MVP этот раздел отложен')">Другое</button>
+    </div></div>`;
+  } else if(step===5){
+    b.innerHTML=`<div class="bubble"><b>🔥 Отопление</b><br>Укажите адрес и кратко опишите проблему.<br><br><b>Ленина, 7</b><br>Батареи холодные во всём подъезде.<div class="tg-buttons"><button onclick="reportStep(6)">Отправить заявку</button><button onclick="reportStep(1)">Назад</button></div></div>`;
+  } else if(step===6){
+    b.innerHTML=`<div class="bubble"><b>✅ Заявка №1048 создана</b><br>Диспетчер получил обращение.<br><br><b>Статус:</b> 🟠 В работе<div class="tg-buttons"><button onclick="reportStep(7)">📍 Посмотреть статус</button><button onclick="reportStep(3)">📢 Уведомления</button></div></div>`;
+  } else if(step===7){
+    b.innerHTML=`<div class="bubble"><b>📍 Заявка №1048</b><br><br>🟢 Заявка принята<br>🟠 Бригада направлена<br>⚪ Проблема устраняется<br><br><span class="small">Последнее обновление: 11:24</span><div class="tg-buttons"><button onclick="reportStep(3)">📢 Уведомления</button><button onclick="reportStep(1)">Новая заявка</button></div></div>`;
+  } else if(step===2){
+    b.innerHTML=`<div class="bubble"><b>📋 Мои заявки</b><br><br>№1048 · 🔥 Отопление<br>Ленина, 7<br>Статус: 🟠 В работе<div class="tg-buttons"><button onclick="reportStep(7)">Открыть</button><button onclick="reportStep(1)">Назад</button></div></div>`;
+  } else if(step===3){
+    b.innerHTML=`<div class="bubble"><b>📢 Уведомления для вашего дома</b><br><br>🟠 Сейчас: аварийные работы по отоплению.<br><br>Предварительное время восстановления: уточняется.<div class="tg-buttons"><button onclick="reportStep(1)">Главное меню</button></div></div>`;
+  } else if(step===4){
+    b.innerHTML=`<div class="bubble"><b>🏠 Ваш дом: Ленина, 7</b><br><br>🔥 Отопление — 🔴 авария<br>💧 Вода — 🟢 норма<br>⚡ Электричество — 🟠 работы<br><br>12 обращений жителей<div class="tg-buttons"><button onclick="reportStep(3)">📢 Уведомления</button><button onclick="reportStep(1)">Главное меню</button></div></div>`;
+  }
+}
+</script>
+</body>
+</html>
