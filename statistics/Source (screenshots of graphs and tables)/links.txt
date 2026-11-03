@@ -5,4 +5,4 @@ https://dom.gosuslugi.ru/#!/pafo/appeals/rate
 
 данные для analysis_2.ipynb будут получены из опросов (до 10.11):
 1)  https://docs.google.com/forms/d/e/1FAIpQLSe_Wht46z9ArLx6lTb8hUNAve_MJzQis1-LVOoH0CKsbfSepg/viewform
-2) В процессе написания
+2) https://forms.yandex.ru/u/6aea13454a052dd962519825/
