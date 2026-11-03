@@ -24,7 +24,7 @@ def main_menu() -> ReplyKeyboardMarkup:
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''Привет! Я бот ЖКУ-контроль. Помогаю подать заявку в управляющую компанию 
+    await message.answer('''Привет! Я ТеплоБот. Помогаю подать заявку в управляющую компанию 
     и отследить её статус без звонков в диспетчерскую.\n\n Выберите действие:''', reply_markup=main_menu())
 
 @dp.message(F.text == "📝 Подать заявку")
