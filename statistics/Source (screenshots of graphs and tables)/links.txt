@@ -1,3 +1,8 @@
 https://dom.gosuslugi.ru/#!/pafo/appeals/rate
 гис жкх. в экселе данные с 2017 по 2026 (с января по январь, в 2026 по состоянию на 01.11.2026 14:26)
 на скринах с сайта в правом углу указаны сроки (20.10.2023 - 20.10.2026)
+
+
+данные для analysis_2.ipynb будут получены из опросов (до 10.11):
+1)  https://docs.google.com/forms/d/e/1FAIpQLSe_Wht46z9ArLx6lTb8hUNAve_MJzQis1-LVOoH0CKsbfSepg/viewform
+2) В процессе написания
