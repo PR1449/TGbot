@@ -17,33 +17,61 @@ dp = Dispatcher()
 
 def main_menu() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
-    builder.row(KeyboardButton(text="📝 Подать заявку"))
+    builder.row(KeyboardButton(text="📝 Подать заявку/Задать вопрос"))
     builder.row(KeyboardButton(text="🔎 Статус заявки"))
     builder.row(KeyboardButton(text="ℹ️ О боте"))
     return builder.as_markup(resize_keyboard=True)
+
+def application_menu() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="🔧 Коммунальные услуги и их перебои"))
+    builder.row(KeyboardButton(text="📄 Вопросы по квитанциям и начислениям"))
+    builder.row(KeyboardButton(text="🚨 Аварийные ситуации"))
+    builder.row(KeyboardButton(text="⬅️ В меню"))
+    return builder.as_markup(resize_keyboard=True)
+
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     await message.answer('''Привет! Я ТеплоБот. Помогаю подать заявку в управляющую компанию 
     и отследить её статус без звонков в диспетчерскую.\n\n Выберите действие:''', reply_markup=main_menu())
 
-@dp.message(F.text == "📝 Подать заявку")
+@dp.message(F.text == "⬅️ В меню")
+async def back_to_menu(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer("Вы в главном меню. Выберите действие:", reply_markup=main_menu())
+
+
+@dp.message(F.text == "📝 Подать заявку/Задать вопрос")
 async def start_ticket(message: Message, state: FSMContext) -> None:
-    await message.answer('''Раздел "📝 Подать заявку" находится в разработке, пожалуйста выберите другую опцию''', reply_markup=main_menu())
+    await message.answer('''Пожалуйста, выберите кактегорию''', reply_markup=application_menu())
 
 @dp.message(F.text == "🔎 Статус заявки")
 async def show_status(message: Message, state: FSMContext) -> None:
-    await message.answer("Раздел в разработке", reply_markup=main_menu())
+    await message.answer("Раздел '🔎 Статус заявки' в разработке, пожалуйста выберите другую опцию", reply_markup=main_menu())
 
 @dp.message(F.text == "ℹ️ О боте")
 async def about(message: Message) -> None:
-    await message.answer("Бот ЖКУ-контроль v0.1", reply_markup=main_menu())   
+    await message.answer("ТеплоБот v0.1", reply_markup=main_menu())
+
+
+@dp.message(F.text == "🔧 Коммунальные услуги и их перебои")
+async def show_status(message: Message, state: FSMContext) -> None:
+    await message.answer("Раздел '🔎🔧 Коммунальные услуги и их перебои' в разработке, пожалуйста выберите другую опцию", reply_markup=main_menu())
+
+@dp.message(F.text == "📄 Вопросы по квитанциям и начислениям")
+async def show_status(message: Message, state: FSMContext) -> None:
+    await message.answer("Раздел '📄 Вопросы по квитанциям и начислениям' в разработке, пожалуйста выберите другую опцию", reply_markup=main_menu())
+
+@dp.message(F.text == "🚨 Аварийные ситуации")
+async def show_status(message: Message, state: FSMContext) -> None:
+    await message.answer("Раздел '🚨 Аварийные ситуации' в разработке, пожалуйста выберите другую опцию", reply_markup=main_menu())
+
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
