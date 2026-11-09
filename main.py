@@ -44,7 +44,7 @@ async def back_to_menu(message: Message, state: FSMContext) -> None:
 
 @dp.message(F.text == "📝 Подать заявку/Задать вопрос")
 async def start_ticket(message: Message, state: FSMContext) -> None:
-    await message.answer('''Пожалуйста, выберите кактегорию''', reply_markup=application_menu())
+    await message.answer('''Пожалуйста, выберите категорию''', reply_markup=application_menu())
 
 @dp.message(F.text == "🔎 Статус заявки")
 async def show_status(message: Message, state: FSMContext) -> None:
