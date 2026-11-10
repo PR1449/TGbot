@@ -13,15 +13,15 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-
 dp = Dispatcher()
 
 
 class TicketForm(StatesGroup):
-    street      = State()
-    house       = State()
-    apartment   = State()
+    street = State()
+    house = State()
+    apartment = State()
     description = State()
+
 
 TABLE_MAP = {
     "🔧 Коммунальные услуги и их перебои": "utility_issues",
@@ -37,6 +37,7 @@ def main_menu() -> ReplyKeyboardMarkup:
     builder.row(KeyboardButton(text="ℹ️ О боте"))
     return builder.as_markup(resize_keyboard=True)
 
+
 def application_menu() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="🔧 Коммунальные услуги и их перебои"))
@@ -45,7 +46,7 @@ def application_menu() -> ReplyKeyboardMarkup:
     builder.row(KeyboardButton(text="⬅️ В меню"))
     return builder.as_markup(resize_keyboard=True)
 
-    
+
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     await message.answer(
@@ -54,14 +55,17 @@ async def command_start_handler(message: Message) -> None:
         reply_markup=main_menu(),
     )
 
+
 @dp.message(F.text == "⬅️ В меню")
 async def back_to_menu(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Вы в главном меню. Выберите действие:", reply_markup=main_menu())
 
+
 @dp.message(F.text == "📝 Подать заявку/Задать вопрос")
 async def start_ticket(message: Message, state: FSMContext) -> None:
     await message.answer("Пожалуйста, выберите категорию:", reply_markup=application_menu())
+
 
 @dp.message(F.text == "🔎 Статус заявки")
 async def show_status(message: Message, state: FSMContext) -> None:
@@ -69,6 +73,7 @@ async def show_status(message: Message, state: FSMContext) -> None:
         "Раздел '🔎 Статус заявки' в разработке, пожалуйста выберите другую опцию",
         reply_markup=main_menu(),
     )
+
 
 @dp.message(F.text == "ℹ️ О боте")
 async def about(message: Message) -> None:
@@ -79,26 +84,30 @@ for _text, _table in TABLE_MAP.items():
     @dp.message(F.text == _text)
     async def _start(message: Message, state: FSMContext, table=_table):
         await state.update_data(table=table)
-        await TicketForm.street.set()
+        await state.set_state(TicketForm.street)
         await message.answer("📍 Укажите улицу:", reply_markup=ReplyKeyboardRemove())
+
 
 @dp.message(TicketForm.street)
 async def f_street(message: Message, state: FSMContext) -> None:
     await state.update_data(street=message.text)
-    await TicketForm.house.set()
+    await state.set_state(TicketForm.house)
     await message.answer("🏠 Номер дома?")
+
 
 @dp.message(TicketForm.house)
 async def f_house(message: Message, state: FSMContext) -> None:
     await state.update_data(house_number=message.text)
-    await TicketForm.apartment.set()
+    await state.set_state(TicketForm.apartment)
     await message.answer("🚪 Номер квартиры (или «–» если не важно):")
+
 
 @dp.message(TicketForm.apartment)
 async def f_apartment(message: Message, state: FSMContext) -> None:
     await state.update_data(apartment_number=message.text if message.text != "–" else None)
-    await TicketForm.description.set()
+    await state.set_state(TicketForm.description)
     await message.answer("📋 Опишите проблему:")
+
 
 @dp.message(TicketForm.description)
 async def f_description(message: Message, state: FSMContext) -> None:
@@ -120,5 +129,6 @@ async def main() -> None:
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
+
 if __name__ == "__main__":
-    asyncio.run(main())   
+    asyncio.run(main())
