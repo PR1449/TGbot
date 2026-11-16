@@ -1,10 +1,11 @@
 from secret_keys import BOT_TOKEN, YANDEX_GEOCODER_KEY, GEOCODER_URL
-from db import init_db, insert_ticket, get_user_tickets, STATUS_MAP, CATEGORY_NAMES
+from db import init_db, insert_ticket, get_user_tickets, soft_delete_tickets, STATUS_MAP, CATEGORY_NAMES
 
 import asyncio
 import logging
 import re
 import aiohttp
+from datetime import datetime, timezone, timedelta
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -20,6 +21,7 @@ dp = Dispatcher()
 STREET_RE = re.compile(r"^[а-яёА-ЯЁa-zA-Z][а-яёА-ЯЁa-zA-Z\s\-\.\№]{2,60}$")
 HOUSE_RE = re.compile(r"^\d+[а-яА-Яa-zA-Z]?(?:\s*(?:к|корп|стр)\.?\s*\d+)?$")
 CITY = "Псков"
+MSK = timezone(timedelta(hours=3))
 GOOD_PRECISION = {"exact", "number", "near", "range"}
 
 TABLE_MAP = {
@@ -28,9 +30,45 @@ TABLE_MAP = {
     "🚨 Аварийные ситуации": "emergency_situations",
 }
 
+CATEGORY_BUTTONS = {
+    "🔧 Коммунальные": "utility_issues",
+    "📄 Квитанции": "billing_questions",
+    "🚨 Аварийные": "emergency_situations",
+}
+
 
 def status_label(code: str) -> str:
     return STATUS_MAP.get(code, f"❔ {code}")
+
+
+def format_date(date_str: str) -> str:
+    if not date_str:
+        return ""
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d")
+        return d.strftime("%d.%m.%Y")
+    except ValueError:
+        return date_str
+
+
+def parse_date(text: str) -> str | None:
+    try:
+        d = datetime.strptime(text.strip(), "%d.%m.%Y")
+        return d.strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def format_ticket(t: dict) -> str:
+    address = f"ул. {t['street']}, д. {t['house_number']}"
+    if t.get("apartment_number"):
+        address += f", кв. {t['apartment_number']}"
+    return (
+        f"🗂 Заявка №{t['id']} — {CATEGORY_NAMES.get(t['category'], t['category'])}\n"
+        f"📍 Адрес: {address}\n"
+        f"📅 Подана: {format_date(t['created_at'])} в {t['created_time']}\n"
+        f"🏷 Статус: {status_label(t['status'])}"
+    )
 
 
 async def _geocode(query: str) -> tuple[dict | None, str | None]:
@@ -106,6 +144,13 @@ class TicketForm(StatesGroup):
     edit_choice = State()
 
 
+class StatusForm(StatesGroup):
+    sort_choice = State()
+    category_select = State()
+    date_start = State()
+    date_end = State()
+
+
 def main_menu() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="📝 Подать заявку/Задать вопрос"))
@@ -142,6 +187,34 @@ def edit_menu() -> ReplyKeyboardMarkup:
     builder.row(KeyboardButton(text="🚪 Квартира"))
     builder.row(KeyboardButton(text="📋 Описание"))
     builder.row(KeyboardButton(text="⬅️ В меню"))
+    return builder.as_markup(resize_keyboard=True)
+
+
+def status_menu() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="📅 История"))
+    builder.row(KeyboardButton(text="🔀 Сортировать"))
+    builder.row(KeyboardButton(text="🗑 Очистить историю"))
+    builder.row(KeyboardButton(text="⬅️ В меню"))
+    return builder.as_markup(resize_keyboard=True)
+
+
+def sort_menu() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="🗂 По категориям"))
+    builder.row(KeyboardButton(text="📅 По дате"))
+    builder.row(KeyboardButton(text="🏷 По статусам"))
+    builder.row(KeyboardButton(text="⬅️ Назад"))
+    return builder.as_markup(resize_keyboard=True)
+
+
+def category_select_menu(selected: set[str]) -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    for label, table in CATEGORY_BUTTONS.items():
+        prefix = "✅ " if table in selected else "   "
+        builder.row(KeyboardButton(text=f"{prefix}{label}"))
+    builder.row(KeyboardButton(text="👁 Показать"))
+    builder.row(KeyboardButton(text="⬅️ Назад"))
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -191,6 +264,35 @@ async def after_street_confirmed(message: Message, state: FSMContext, street: st
     await message.answer("🏠 Номер дома (например, 12 или 12а):")
 
 
+async def after_house_confirmed(message: Message, state: FSMContext, house: str) -> None:
+    data = await state.get_data()
+    await state.update_data(house_number=house)
+
+    if data.get("editing"):
+        await go_summary(message, state)
+        return
+
+    await state.set_state(TicketForm.apartment)
+    await message.answer("🚪 Номер квартиры (или «0» если не важно):")
+
+
+async def show_tickets(message: Message, tickets: list[dict], title: str = "") -> None:
+    if not tickets:
+        await message.answer(
+            f"{title}\n\nЗаявок не найдено.",
+            reply_markup=status_menu(),
+        )
+        return
+
+    lines = [format_ticket(t) for t in tickets[:20]]
+    header = f"{title}\n\n" if title else ""
+    footer = f"\n\nПоказано: {min(len(tickets), 20)} из {len(tickets)}" if len(tickets) > 20 else ""
+    await message.answer(
+        header + "\n\n".join(lines) + footer,
+        reply_markup=status_menu(),
+    )
+
+
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     await message.answer(
@@ -212,35 +314,167 @@ async def start_ticket(message: Message, state: FSMContext) -> None:
     await message.answer("Пожалуйста, выберите категорию:", reply_markup=application_menu())
 
 
-@dp.message(F.text == "🔎 Статус заявки")
-async def show_status(message: Message) -> None:
-    tickets = get_user_tickets(message.from_user.id)
-    if not tickets:
-        await message.answer(
-            "У вас пока нет заявок.\n\nЧтобы подать заявку, нажмите "
-            "«📝 Подать заявку/Задать вопрос».",
-            reply_markup=main_menu(),
-        )
-        return
-
-    lines = []
-    for t in tickets[:10]:
-        address = f"ул. {t['street']}, д. {t['house_number']}"
-        if t.get("apartment_number"):
-            address += f", кв. {t['apartment_number']}"
-        lines.append(
-            f"🗂 Заявка №{t['id']} — {CATEGORY_NAMES.get(t['category'], t['category'])}\n"
-            f"📍 Адрес: {address}\n"
-            f"📅 Подана: {t['created_at']} в {t['created_time']}\n"
-            f"🏷 Статус: {status_label(t['status'])}"
-        )
-
-    await message.answer("📋 Ваши заявки:\n\n" + "\n\n".join(lines), reply_markup=main_menu())
-
-
 @dp.message(F.text == "ℹ️ О боте")
 async def about(message: Message) -> None:
     await message.answer("ТеплоБот v0.1", reply_markup=main_menu())
+
+
+@dp.message(F.text == "🔎 Статус заявки")
+async def show_status(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    now = datetime.now(MSK)
+    month_start = now.replace(day=1).strftime("%Y-%m-%d")
+    tickets = get_user_tickets(message.from_user.id, start_date=month_start)
+    month_name = now.strftime("%B %Y")
+    await show_tickets(message, tickets, title=f"📋 Заявки за {month_name}:")
+
+
+@dp.message(F.text == "📅 История")
+async def show_history(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    tickets = get_user_tickets(message.from_user.id)
+    await show_tickets(message, tickets, title="📋 Все заявки:")
+
+
+@dp.message(F.text == "🗑 Очистить историю")
+async def clear_history(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    count = soft_delete_tickets(message.from_user.id)
+    if count == 0:
+        await message.answer("История уже пуста.", reply_markup=status_menu())
+    else:
+        await message.answer(
+            f"🗑 Удалено заявок: {count}\nОни больше не отображаются.",
+            reply_markup=status_menu(),
+        )
+
+
+@dp.message(F.text == "🔀 Сортировать")
+async def start_sort(message: Message, state: FSMContext) -> None:
+    await state.set_state(StatusForm.sort_choice)
+    await message.answer("Выберите способ сортировки:", reply_markup=sort_menu())
+
+
+@dp.message(StatusForm.sort_choice, F.text == "🗂 По категориям")
+async def sort_by_category(message: Message, state: FSMContext) -> None:
+    await state.set_state(StatusForm.category_select)
+    await state.update_data(selected_categories=[])
+    await message.answer(
+        "Выберите категории (нажмите для переключения):\n"
+        "✅ — выбрано, пусто — не выбрано",
+        reply_markup=category_select_menu(set()),
+    )
+
+
+@dp.message(StatusForm.category_select, F.text)
+async def f_category_select(message: Message, state: FSMContext) -> None:
+    text = message.text.strip()
+    data = await state.get_data()
+    selected: set[str] = set(data.get("selected_categories", []))
+
+    if text == "👁 Показать":
+        if not selected:
+            await message.answer("Выберите хотя бы одну категорию:", reply_markup=category_select_menu(selected))
+            return
+        tickets = get_user_tickets(
+            message.from_user.id,
+            sort_by="category",
+            categories=list(selected),
+        )
+        await state.clear()
+        await show_tickets(message, tickets, title="🗂 Заявки по категориям:")
+        return
+
+    if text == "⬅️ Назад":
+        await state.clear()
+        now = datetime.now(MSK)
+        month_start = now.replace(day=1).strftime("%Y-%m-%d")
+        tickets = get_user_tickets(message.from_user.id, start_date=month_start)
+        month_name = now.strftime("%B %Y")
+        await show_tickets(message, tickets, title=f"📋 Заявки за {month_name}:")
+        return
+
+    for label, table in CATEGORY_BUTTONS.items():
+        if text == label or text == f"✅ {label}":
+            if table in selected:
+                selected.discard(table)
+            else:
+                selected.add(table)
+            await state.update_data(selected_categories=list(selected))
+            await message.answer(
+                "Выберите категории (нажмите для переключения):\n"
+                "✅ — выбрано, пусто — не выбрано",
+                reply_markup=category_select_menu(selected),
+            )
+            return
+
+    await message.answer("Выберите категорию или нажмите «👁 Показать»:", reply_markup=category_select_menu(selected))
+
+
+@dp.message(StatusForm.sort_choice, F.text == "🏷 По статусам")
+async def sort_by_status(message: Message, state: FSMContext) -> None:
+    tickets = get_user_tickets(message.from_user.id, sort_by="status")
+    await state.clear()
+    await show_tickets(message, tickets, title="🏷 Заявки по статусам:")
+
+
+@dp.message(StatusForm.sort_choice, F.text == "📅 По дате")
+async def sort_by_date(message: Message, state: FSMContext) -> None:
+    await state.set_state(StatusForm.date_start)
+    await message.answer(
+        "📅 Введите дату начала периода (ДД.ММ.ГГГГ):\n"
+        "Например: 01.11.2026",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+
+@dp.message(StatusForm.date_start, F.text)
+async def f_date_start(message: Message, state: FSMContext) -> None:
+    parsed = parse_date(message.text)
+    if not parsed:
+        await message.answer("Неверный формат. Введите дату как ДД.ММ.ГГГГ, например 01.11.2026:")
+        return
+
+    await state.update_data(start_date=parsed)
+    await state.set_state(StatusForm.date_end)
+    await message.answer(
+        f"Начало: {message.text.strip()}\n\n📅 Введите дату конца периода (ДД.ММ.ГГГГ):"
+    )
+
+
+@dp.message(StatusForm.date_end, F.text)
+async def f_date_end(message: Message, state: FSMContext) -> None:
+    parsed = parse_date(message.text)
+    if not parsed:
+        await message.answer("Неверный формат. Введите дату как ДД.ММ.ГГГГ, например 16.11.2026:")
+        return
+
+    data = await state.get_data()
+    start = data["start_date"]
+
+    if parsed < start:
+        await message.answer("Дата конца раньше даты начала. Введите дату конца заново:")
+        return
+
+    tickets = get_user_tickets(
+        message.from_user.id,
+        start_date=start,
+        end_date=parsed,
+        sort_by="date",
+    )
+    await state.clear()
+    title = f"📅 Заявки с {format_date(start)} по {format_date(parsed)}:"
+    await show_tickets(message, tickets, title=title)
+
+
+@dp.message(StatusForm.sort_choice, F.text == "⬅️ Назад")
+async def sort_back(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    now = datetime.now(MSK)
+    month_start = now.replace(day=1).strftime("%Y-%m-%d")
+    tickets = get_user_tickets(message.from_user.id, start_date=month_start)
+    month_name = now.strftime("%B %Y")
+    await show_tickets(message, tickets, title=f"📋 Заявки за {month_name}:")
 
 
 for _text, _table in TABLE_MAP.items():
@@ -248,7 +482,7 @@ for _text, _table in TABLE_MAP.items():
     async def _start(message: Message, state: FSMContext, table=_table):
         await state.update_data(table=table)
         await state.set_state(TicketForm.street)
-        await message.answer("📍 Укажите улицу:", reply_markup=ReplyKeyboardRemove())
+        await message.answer("📍 Улица, на которой Вы проживаете:", reply_markup=ReplyKeyboardRemove())
 
 
 @dp.message(TicketForm.street, F.text)
@@ -362,18 +596,6 @@ async def f_house_suggest(message: Message, state: FSMContext) -> None:
     await message.answer("Выберите «✅ Да» или «❌ Нет»:")
 
 
-async def after_house_confirmed(message: Message, state: FSMContext, house: str) -> None:
-    data = await state.get_data()
-    await state.update_data(house_number=house)
-
-    if data.get("editing"):
-        await go_summary(message, state)
-        return
-
-    await state.set_state(TicketForm.apartment)
-    await message.answer("🚪 Номер квартиры (или «0» если не важно):")
-
-
 @dp.message(TicketForm.apartment, F.text)
 async def f_apartment(message: Message, state: FSMContext) -> None:
     text = message.text.strip()
@@ -470,6 +692,8 @@ async def f_edit_choice(message: Message, state: FSMContext) -> None:
 @dp.message(TicketForm.description)
 @dp.message(TicketForm.summary)
 @dp.message(TicketForm.edit_choice)
+@dp.message(StatusForm.date_start)
+@dp.message(StatusForm.date_end)
 async def not_text(message: Message) -> None:
     await message.answer("Пожалуйста, используйте кнопки или введите текст.")
 
